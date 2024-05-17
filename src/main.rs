@@ -18,21 +18,34 @@ fn main() {
     println!("\n\nPretty printing:");
 
     root.print_tree();
+    println!("Tree size: {}", root.tree_size());
 
-    let root = new_star_tree("root", vec!["A", "B", "C", "D"]);
+    let root = new_star_tree("root", vec!["A", "B", "C", "D", "E"]);
     root.print_tree();
+    println!("Tree size: {}", root.tree_size());
 
-    let root = new_chain_tree(vec!["A", "B", "C", "D"]);
+    let root = new_chain_tree(vec!["A", "B", "C"]);
     root.print_tree();
+    println!("Tree size: {}", root.tree_size());
+
+    let temp = TreeNode::new("leaf");
+    let root = TreeNode::new_with_children("root", vec![temp]);
+    let leaf = &root.children[0]; // Create a reference to the leaf
+    println!("Root tree size: {}", root.tree_size()); // 2
+    println!("Leaf tree size: {}", leaf.tree_size()); // 1
 }
 
 #[derive(Debug, Clone)]
+
+/// Represents a tree node with data `S`.
+/// Note that `S` should be immutable and implement `Debug` and `Clone` traits.
 struct TreeNode<S> {
     payload: S,
     children: Vec<TreeNode<S>>,
 }
 
 impl<S: Clone + Debug> TreeNode<S> {
+    /// Creates a new leaf node (without children) storing data `S`.
     fn new(payload: S) -> TreeNode<S> {
         TreeNode {
             payload: payload,
@@ -40,6 +53,7 @@ impl<S: Clone + Debug> TreeNode<S> {
         }
     }
 
+    /// Creates a new node with payload `S` and children `children`.
     fn new_with_children(payload: S, children: Vec<TreeNode<S>>) -> TreeNode<S> {
         let mut node = TreeNode::new(payload);
         for v in children {
@@ -48,12 +62,35 @@ impl<S: Clone + Debug> TreeNode<S> {
         node
     }
 
+    /// Adds a new `child`.
     fn add_child(&mut self, child: TreeNode<S>) {
         self.children.push(child);
     }
 
+    /// Prints out the tree to the standard output.
     fn print_tree(&self) {
         _print_tree(self, "", "");
+    }
+
+    /// Calculates the subtree size (with the node included).
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// let temp = TreeNode::new("leaf");
+    /// let root = TreeNode::new_with_children("root", vec![temp]);
+    /// let leaf = &root.children[0];  // Create a reference to the leaf
+    /// assert_eq!(root.tree_size(), 2);
+    /// assert_eq!(leaf.tree_size(), 1);
+    /// ```
+    fn tree_size(&self) -> usize {
+        // Start with the current node
+        let mut count = 1;
+        // Add the count of each child subtree
+        for child in self.children.iter() {
+            count += child.tree_size();
+        }
+        count
     }
 }
 
