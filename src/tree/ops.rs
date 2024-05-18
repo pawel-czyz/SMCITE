@@ -6,7 +6,7 @@ where
 {
     let mut tree = Tree::new(root);
     for node in nodes {
-        tree.add_child(root, node);
+        tree.add_node(&root, &node);
     }
     tree
 }
@@ -20,7 +20,7 @@ where
         let mut tree = Tree::new(root);
         let mut current = root;
         for node in iter {
-            tree.add_child(current, node);
+            tree.add_node(&current, &node);
             current = node;
         }
         tree

@@ -8,16 +8,39 @@ pub type Node = u32;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Tree {
     root: Node,
+    nodes: HashSet<Node>,
     #[serde(serialize_with = "_map_to_vec", deserialize_with = "_vec_to_map")]
     children: HashMap<Node, HashSet<Node>>,
     parents: HashMap<Node, Node>,
 }
 
+impl PartialEq for Tree {
+    fn eq(&self, other: &Self) -> bool {
+        self.root == other.root
+            && self.children == other.children
+            && self.parents == other.parents
+            && self.nodes == other.nodes
+    }
+}
+
+impl Eq for Tree {}
+
+
+#[derive(Debug)]
+pub enum TreeError {
+    NodeNotFound,
+    NodeAlreadyExists,
+}
+
 impl Tree {
     /// Creates a new rooted tree with a single node `root`.
     pub fn new(root: Node) -> Self {
+        let mut nodes = HashSet::new();
+        nodes.insert(root);
+
         Tree {
             root: root,
+            nodes: nodes,
             children: HashMap::new(),
             parents: HashMap::new(),
         }
@@ -28,13 +51,34 @@ impl Tree {
         self.root
     }
 
-    /// Adds a child node to a parent.
-    pub fn add_child(&mut self, parent: Node, child: Node) {
+    pub fn contains(&self, node: &Node) -> bool {
+        self.nodes.contains(node)
+    }
+
+    fn unsafe_add_node(&mut self, parent: &Node, child: &Node) {
+        self.nodes.insert(*child);
+
         self.children
-            .entry(parent)
+            .entry(*parent)
             .or_insert_with(HashSet::new)
-            .insert(child);
-        self.parents.insert(child, parent);
+            .insert(*child);
+
+        self.parents.insert(*child, *parent);
+    }
+
+    /// Adds a child node to a parent.
+    pub fn add_node(&mut self, parent: &Node, child: &Node) -> Result<(), TreeError> {
+        // Parent does not exist -> Error
+        if !self.contains(parent) {
+            return Err(TreeError::NodeNotFound);
+        }
+        // Child already is in the tree -> Error
+        if self.contains(child) {
+            return Err(TreeError::NodeAlreadyExists);
+        }
+
+        self.unsafe_add_node(parent, child);
+        Ok(())
     }
 
     /// Prints out the tree to the standard output.
@@ -50,69 +94,76 @@ impl Tree {
         }
     }
 
-    pub fn subtree_size(&self, i: Node) -> Result<usize, String> {
-        fn dfs(tree: &Tree, node: Node) -> usize {
+    pub fn subtree_size(&self, node: Node) -> Result<usize, TreeError> {
+        fn dfs(tree: &Tree, node: &Node) -> usize {
             let mut size = 1; // Count the current node
             if let Some(children) = tree.children.get(&node) {
                 for &child in children {
-                    size += dfs(tree, child);
+                    size += dfs(tree, &child);
                 }
             }
             size
         }
 
-        if self.parents.contains_key(&i) || self.root == i {
-            Ok(dfs(self, i))
+        if self.contains(&node) {
+            Ok(dfs(self, &node))
         } else {
-            Err(format!("Node {} is not in the tree.", i))
+            Err(TreeError::NodeNotFound)
         }
     }
 
-    pub fn swap_labels(&mut self, i: Node, j: Node) -> Result<(), String> {
-        if !self.children.contains_key(&i) || !self.children.contains_key(&j) {
-            return Err("One or both nodes do not exist".to_string());
+    pub fn swap_labels(&mut self, i: &Node, j: &Node) -> Result<(), TreeError> {
+        println!("Swapping labels...");
+        
+        if !self.contains(&i) || !self.contains(&j) {
+            return Err(TreeError::NodeNotFound);
         }
+
+        println!("Nodes exist...");
 
         // If either node is the root, handle root swapping
-        if self.root == i {
-            self.root = j;
-        } else if self.root == j {
-            self.root = i;
+        if self.root == *i {
+            self.root = *j;
+        } else if self.root == *j {
+            self.root = *i;
         }
 
-        // Swap children of i and j
-        let children_i = self.children.remove(&i).unwrap_or_default();
-        let children_j = self.children.remove(&j).unwrap_or_default();
-        self.children.insert(i, children_j.clone());
-        self.children.insert(j, children_i.clone());
+        // Now we have update children and parents
+        // Note that for either node these may not exist.
+        let children_i = self.children.remove(i);
+        let children_j = self.children.remove(j);
 
-        // Update parents of the children
-        for child in &children_i {
-            self.parents.insert(*child, j);
-        }
-        for child in &children_j {
-            self.parents.insert(*child, i);
-        }
+        let parent_i = self.parents.remove(i);
+        let parent_j = self.parents.remove(j);
 
-        // Swap parents of i and j if they are not the root
-        if let Some(parent_i) = self.parents.remove(&i) {
-            self.parents.insert(j, parent_i);
-        }
-        if let Some(parent_j) = self.parents.remove(&j) {
-            self.parents.insert(i, parent_j);
-        }
-
-        // Update the parent's children set
-        if let Some(parent_i) = self.parents.get(&j) {
-            if let Some(children) = self.children.get_mut(parent_i) {
-                children.remove(&i);
-                children.insert(j);
+        if let Some(set) = children_i {
+            // Node i has children
+            for child in set.iter() {
+                self.unsafe_add_node(j, child);
             }
         }
-        if let Some(parent_j) = self.parents.get(&i) {
-            if let Some(children) = self.children.get_mut(parent_j) {
-                children.remove(&j);
-                children.insert(i);
+        if let Some(set) = children_j {
+            // Node j has children
+            for child in set.iter() {
+                self.unsafe_add_node(i, child);
+            }
+        }
+
+        // Finally: we need to fix the parents.
+        if let Some(parent) = parent_i {
+            self.parents.insert(*j, parent);
+            // Update parent's children list
+            if let Some(children) = self.children.get_mut(&parent) {
+                children.remove(i);
+                children.insert(*j);
+            }
+        }
+        if let Some(parent) = parent_j {
+            self.parents.insert(*i, parent);
+            // Update parent's children list
+            if let Some(children) = self.children.get_mut(&parent) {
+                children.remove(j);
+                children.insert(*i);
             }
         }
 
