@@ -2,8 +2,12 @@ use rand_distr::{Distribution, Uniform};
 
 pub type LogProb = f32;
 
-
-pub fn metropolis_ratio(logp1: LogProb, logp2: LogProb, log1given2: LogProb, log2given1: LogProb) -> LogProb {
+pub fn metropolis_ratio(
+    logp1: LogProb,
+    logp2: LogProb,
+    log1given2: LogProb,
+    log2given1: LogProb,
+) -> LogProb {
     let a = logp2 + log1given2 - (logp1 + log2given1);
     return LogProb::min(1.0, a.exp());
 }
@@ -40,7 +44,6 @@ pub fn metropolis_symmetric_step<S>(
 ) -> S {
     return metropolis_hastings_step(rng, state1, state2, logp1, logp2, 0.0, 0.0);
 }
-
 
 #[cfg(test)]
 mod tests {

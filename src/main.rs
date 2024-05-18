@@ -1,5 +1,5 @@
-use smcite::tree::{create_chain_tree, create_star_tree, Tree};
 use serde_json;
+use smcite::tree::{create_chain_tree, create_star_tree, Tree};
 
 fn main() {
     let mut tree = Tree::new(0);

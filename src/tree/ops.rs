@@ -1,4 +1,4 @@
-use super::core::{Tree, Node};
+use super::core::{Node, Tree};
 
 pub fn create_star_tree<I>(root: Node, nodes: I) -> Tree
 where
