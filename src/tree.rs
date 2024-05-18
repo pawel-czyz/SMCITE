@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use serde_json;
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 pub type Node = u32;
