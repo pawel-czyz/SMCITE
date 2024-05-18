@@ -18,7 +18,7 @@ pub fn metropolis_hastings_step<S>(
     log1given2: LogProb,
     log2given1: LogProb,
 ) -> S {
-    let a = _metropolis_ratio(logp1, logp2, log1given2, log2given1);
+    let a = metropolis_ratio(logp1, logp2, log1given2, log2given1);
 
     let uniform = Uniform::<LogProb>::new(0.0, 1.0);
     let u: LogProb = uniform.sample(rng);
@@ -39,4 +39,23 @@ pub fn metropolis_symmetric_step<S>(
     logp2: LogProb,
 ) -> S {
     return metropolis_hastings_step(rng, state1, state2, logp1, logp2, 0.0, 0.0);
+}
+
+
+#[cfg(test)]
+mod tests {
+    // Note this useful idiom: importing names from outer (for mod tests) scope.
+    use super::*;
+
+    #[test]
+    fn test_add() {
+        assert_eq!(1 + 2, 3);
+    }
+
+    #[test]
+    fn test_bad_add() {
+        // This assert would fire and test will fail.
+        // Please note, that private functions can be tested too!
+        assert_eq!(1 + 8, 3);
+    }
 }

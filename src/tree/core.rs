@@ -1,8 +1,10 @@
+/// Implementation of a tree together with its core utilities.
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 pub type Node = u32;
 
+/// Tree data structure.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Tree {
     root: Node,
@@ -62,34 +64,6 @@ impl Tree {
     }
 }
 
-pub fn create_star_tree<I>(root: Node, nodes: I) -> Tree
-where
-    I: IntoIterator<Item = Node>,
-{
-    let mut tree = Tree::new(root);
-    for node in nodes {
-        tree.add_child(root, node);
-    }
-    tree
-}
-
-pub fn create_chain_tree<I>(nodes: I) -> Tree
-where
-    I: IntoIterator<Item = Node>,
-{
-    let mut iter = nodes.into_iter();
-    if let Some(root) = iter.next() {
-        let mut tree = Tree::new(root);
-        let mut current = root;
-        for node in iter {
-            tree.add_child(current, node);
-            current = node;
-        }
-        tree
-    } else {
-        panic!("The input list must contain at least one node.");
-    }
-}
 
 fn _print_tree(tree: &Tree, node: Node, prefix: &str, is_last: bool) {
     // Print the current node
