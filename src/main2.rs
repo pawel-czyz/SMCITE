@@ -6,10 +6,7 @@ type LogProb = f32;
 type State = f64;
 
 
-use std::sync::Arc;
-
-
-fn main2() {
+fn main() {
     let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(42);
 
     let mut state: State = -8.0;
