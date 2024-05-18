@@ -1,10 +1,13 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
+use serde::{Deserialize, Serialize};
+use serde_json;
 
 type Node = u32;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct Tree {
     root: Node,
+    #[serde(serialize_with = "_map_to_vec", deserialize_with = "_vec_to_map")]
     children: HashMap<Node, HashSet<Node>>,
     parents: HashMap<Node, Node>,
 }
@@ -104,6 +107,22 @@ fn _print_tree(tree: &Tree, node: Node, prefix: &str, is_last: bool) {
 }
 
 
+fn _map_to_vec<S>(map: &HashMap<Node, HashSet<Node>>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    let map: BTreeMap<_, Vec<_>> = map.iter().map(|(&k, v)| (k, v.iter().cloned().collect())).collect();
+    map.serialize(serializer)
+}
+
+fn _vec_to_map<'de, D>(deserializer: D) -> Result<HashMap<Node, HashSet<Node>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let map: BTreeMap<Node, Vec<Node>> = BTreeMap::deserialize(deserializer)?;
+    Ok(map.into_iter().map(|(k, v)| (k, v.into_iter().collect())).collect())
+}
+
 
 
 fn main() {
@@ -135,4 +154,11 @@ fn main() {
     let tree = create_chain_tree(vec![5, 10, 14, 20]);
     tree.print();
 
+    let serialized = serde_json::to_string(&tree).unwrap();
+    println!("Serialized tree: {}", serialized);
+
+    // Deserialize the JSON string back to a Tree
+    let deserialized: Tree = serde_json::from_str(&serialized).unwrap();
+    println!("Deserialized:");
+    deserialized.print();
 }
