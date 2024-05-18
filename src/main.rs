@@ -10,6 +10,7 @@ struct Tree {
 }
 
 impl Tree {
+    /// Creates a new rooted tree with a single node `root`.
     fn new(root: Node) -> Self {
         Tree {
             root: root,
@@ -18,7 +19,7 @@ impl Tree {
         }
     }
 
-    /// Adds a child to a parent
+    /// Adds a child node to a parent.
     fn add_child(&mut self, parent: Node, child: Node) {
         self.children.entry(parent).or_insert_with(HashSet::new).insert(child);
         self.parents.insert(child, parent);
@@ -35,7 +36,25 @@ impl Tree {
                 _print_tree(self, *child, "", i == count - 1);
             }
         }
-    }       
+    }
+
+    fn subtree_size(&self, i: Node) -> Result<usize, String> {
+        fn dfs(tree: &Tree, node: Node) -> usize {
+            let mut size = 1; // Count the current node
+            if let Some(children) = tree.children.get(&node) {
+                for &child in children {
+                    size += dfs(tree, child);
+                }
+            }
+            size
+        }
+
+        if self.parents.contains_key(&i) || self.root == i {
+            Ok(dfs(self, i))
+        } else {
+            Err(format!("Node {} is not in the tree.", i))
+        }
+    }
 }
 
 
@@ -48,6 +67,24 @@ where
         tree.add_child(root, node);
     }
     tree
+}
+
+fn create_chain_tree<I>(nodes: I) -> Tree
+where
+    I: IntoIterator<Item = Node>,
+{
+    let mut iter = nodes.into_iter();
+    if let Some(root) = iter.next() {
+        let mut tree = Tree::new(root);
+        let mut current = root;
+        for node in iter {
+            tree.add_child(current, node);
+            current = node;
+        }
+        tree
+    } else {
+        panic!("The input list must contain at least one node.");
+    }
 }
 
 fn _print_tree(tree: &Tree, node: Node, prefix: &str, is_last: bool) {
@@ -83,10 +120,19 @@ fn main() {
     tree.add_child(12, 1001);
     tree.add_child(1001, 100011);
 
-    println!("{:?}", tree);
-
     tree.print();
+
+    for idx in [0, 1, 2, 6, 1001, 100011, 108] {
+        match tree.subtree_size(idx) {
+            Ok(size) => println!("Subtree size starting at node {}: {}", idx, size),
+            Err(err) => println!("{}", err),
+        }
+    }
 
     let tree = create_star_tree(0, vec![10, 14, 20]);
     tree.print();
+
+    let tree = create_chain_tree(vec![5, 10, 14, 20]);
+    tree.print();
+
 }
