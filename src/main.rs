@@ -1,11 +1,11 @@
-use smcite::tree::{Tree, create_chain_tree};
+use smcite::tree::{create_chain_tree, Tree};
 
-fn main() {   
+fn main() {
     let mut tree = create_chain_tree([0, 1, 2, 3]);
     tree.print();
 
     match tree.swap_labels(&1, &3) {
-        Ok(value) => println!("Worked properly."),
+        Ok(_) => println!("Worked properly."),
         Err(e) => println!("Error caught! {:?}", e),
     };
 

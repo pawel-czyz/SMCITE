@@ -25,7 +25,6 @@ impl PartialEq for Tree {
 
 impl Eq for Tree {}
 
-
 #[derive(Debug)]
 pub enum TreeError {
     NodeNotFound,
@@ -113,13 +112,9 @@ impl Tree {
     }
 
     pub fn swap_labels(&mut self, i: &Node, j: &Node) -> Result<(), TreeError> {
-        println!("Swapping labels...");
-        
         if !self.contains(&i) || !self.contains(&j) {
             return Err(TreeError::NodeNotFound);
         }
-
-        println!("Nodes exist...");
 
         // If either node is the root, handle root swapping
         if self.root == *i {
@@ -136,6 +131,8 @@ impl Tree {
         let parent_i = self.parents.remove(i);
         let parent_j = self.parents.remove(j);
 
+        // We add (old) children of i as (new) children of j
+        // and at the same time update their parent to j
         if let Some(set) = children_i {
             // Node i has children
             for child in set.iter() {
