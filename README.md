@@ -20,12 +20,9 @@ This package aims at providing an ecosystem such that:
   - Although the main sampling part is implemented in Rust, it integrates well with Python and Snakemake thanks to [Maturin](https://www.maturin.rs/).
 
 
-If this project were successful, we would have something like a Rust-based BlackJAX ("BlackForest"?): you construct a Rust-based loglikelihood taking the tree and the parameters, choose one of the highly-parallelized samplers in Rust and then you obtain a posterior over trees.
-However, I guess that (a) the project may fail for a lot of reasons in between and (b) even if it didn't fail, it'd still several months of work before it even looks somewhat usable :wink: So I'm treating it right now just as an opportunity to learn more Rust. Glad you're learning it as well!
-
 ## Disclaimer
-This is an early-stage experimental project and it may be later abandoned due to the lack of time, computational issue which have not been anticipated, or unforeseen reasons. We welcome contributions, but at the same time we suggest to not rely on this package at this stage. 
-
+This is an early-stage experimental project and it may be later abandoned due to the lack of time, computational issue which have not been anticipated, or unforeseen reasons.
+We welcome contributions, but at the same time we suggest to not rely on this package at this stage. 
 
 ## Why a new package?
 
@@ -33,3 +30,4 @@ There are several alternatives we have considered:
   - [BlackJAX](https://github.com/blackjax-devs/blackjax) would be our preferred choice due to a great ecosystem of different samplers. However, we found working with combinatorial structures, such as trees with variable number of nodes, not very convenient in JAX (which is however excellent for working with array-like objects). 
   - [Blang](https://www.stat.ubc.ca/~bouchard/blang/), which is a full probabilistic programming language, but does not seem to support models for cancer phylogeny inference.
   - Julia has an excellent ecosystem consisting of [Pigeons.jl](https://github.com/Julia-Tempering/Pigeons.jl) and [Turing.jl](https://turing.ml/). However, Rust has better capabilities for integration with Python and static compilation.
+
