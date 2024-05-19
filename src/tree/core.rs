@@ -303,6 +303,25 @@ impl Tree {
 
         Ok(())
     }
+
+
+    /// Calculates the height of the tree.
+    pub fn calculate_height(&self) -> usize {
+        self.calculate_height_from_node(self.get_root())
+    }
+
+    /// Calculates the height of the subtree starting at `node`.
+    pub fn calculate_height_from_node(&self, node: Node) -> usize {
+        if let Some(children) = self.children.get(&node) {
+            let max_height = children.iter()
+                .map(|&child| self.calculate_height_from_node(child))
+                .max()
+                .unwrap_or(0);
+            max_height + 1
+        } else {
+            1 // Leaf node
+        }
+    }
 }
 
 fn _print_tree(tree: &Tree, node: Node, prefix: &str, is_last: bool) {
