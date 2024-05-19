@@ -328,7 +328,7 @@ impl Tree {
         }
     }
 
-    /// Returns a set (possibly empty) with descendants.
+    /// Returns a set (possibly empty) with descendants (not including `node`).
     pub fn get_descendants(&self, node: Node) -> HashSet<Node> {
         let mut descendants = HashSet::new();
         self.collect_descendants(node, &mut descendants);
@@ -341,6 +341,18 @@ impl Tree {
                 if descendants.insert(child) {
                     self.collect_descendants(child, descendants);
                 }
+            }
+        }
+    }
+
+    /// Drops `child` from `parent`'s children list.
+    /// Note that it does not change `child`'s parent attribute
+    /// or remove it from the node.
+    fn unsafe_drop_child_from_list(&mut self, node: Node, parent: Node) {
+        if let Some(set) = self.children.get_mut(&parent) {
+            set.remove(&node);
+            if set.is_empty() {
+                self.children.remove(&parent);
             }
         }
     }
@@ -364,18 +376,81 @@ impl Tree {
         // At this point note that node != root, because new_parent would need
         // to be a root or would be a descendant
 
-        // Remove node from current `parent` set (it exists, as it's not the root)
+        // Remove node from current `parent`'s children set (it exists, as it's not the root)
         let parent = self.parents.get(&node).unwrap();
-        if let Some(set) = self.children.get_mut(parent) {
-            set.remove(&node);
-            if set.is_empty() {
-                self.children.remove(parent);
-            }
-        }
+        self.unsafe_drop_child_from_list(node, *parent);
         // Reattach the node to the new parent.
         self.unsafe_add_node(new_parent, node);
 
         Ok(())
+    }
+
+    pub fn is_leaf(&self, node: Node) -> bool {
+        return !self.children.contains_key(&node);
+    }
+
+    /// Removes a non-root `node`, reattaching its children to `node`'s parent.
+    pub fn remove_node_reattach_subtree(&mut self, node: Node) -> Result<(), TreeError> {
+        // Not possible to remove the root.
+        if node == self.get_root() {
+            return Err(TreeError::TopologyError);
+        }
+
+        let parent = *self.parents.get(&node).unwrap();
+
+        // Add children to the parent
+        let children: Vec<Node> = self
+            .children
+            .get(&node)
+            .unwrap_or(&HashSet::new())
+            .iter()
+            .cloned()
+            .collect();
+        for child in &children {
+            self.unsafe_add_node(parent, *child);
+        }
+
+        // Remove `node` from the parent's set:
+        self.unsafe_drop_child_from_list(node, parent);
+
+        // Remove `node` from all structures:
+        self.children.remove(&node);
+        self.parents.remove(&node);
+        self.nodes.remove(&node);
+        Ok(())
+    }
+
+    /// Removes a non-root `node` together with its subtree.
+    pub fn remove_node_with_subtree(&mut self, node: Node) -> Result<(), TreeError> {
+        // Not possible to remove the root.
+        if node == self.get_root() {
+            return Err(TreeError::TopologyError);
+        }
+
+        let subtree_nodes = self.get_subtree_nodes_post_order(node)?;
+
+        // Remove each node in the subtree
+        for &subtree_node in &subtree_nodes {
+            self.remove_node_reattach_subtree(subtree_node)?;
+        }
+
+        Ok(())
+    }
+
+    /// Returns nodes in the subtree starting at `node` (inclusive) in the post-order (DFS-order).
+    fn get_subtree_nodes_post_order(&self, node: Node) -> Result<Vec<Node>, TreeError> {
+        let mut nodes = Vec::new();
+        self._collect_subtree_nodes_post_order(node, &mut nodes);
+        Ok(nodes)
+    }
+
+    fn _collect_subtree_nodes_post_order(&self, node: Node, nodes: &mut Vec<Node>) {
+        if let Some(children) = self.children.get(&node) {
+            for &child in children {
+                self._collect_subtree_nodes_post_order(child, nodes);
+            }
+        }
+        nodes.push(node);
     }
 }
 
