@@ -36,6 +36,11 @@ pub enum TreeError {
 }
 
 impl Tree {
+    /// Calculates the number of nodes in the tree
+    pub fn len(&self) -> usize {
+        self.nodes.len()
+    }
+
     /// Creates a new rooted tree with a single node `root`.
     pub fn new(root: Node) -> Self {
         let mut nodes = HashSet::new();
@@ -363,6 +368,9 @@ impl Tree {
         let parent = self.parents.get(&node).unwrap();
         if let Some(set) = self.children.get_mut(parent) {
             set.remove(&node);
+            if set.is_empty() {
+                self.children.remove(parent);
+            }
         }
         // Reattach the node to the new parent.
         self.unsafe_add_node(new_parent, node);
@@ -442,100 +450,140 @@ mod tests {
         assert_eq!(tree.get_root(), 0);
     }
 
-    #[test]
-    fn test_swap_labels_10_11() {
-        let mut tree = Tree::new(0);
+    mod test_prune_and_reattach {
+        use super::*;
 
-        tree.add_node(0, 1).unwrap();
-        tree.add_node(1, 2).unwrap();
-        tree.add_node(2, 3).unwrap();
+        #[test]
+        fn test_prune_1() {
+            let mut tree = Tree::new(0);
 
-        tree.add_node(0, 11).unwrap();
-        tree.add_node(11, 10).unwrap();
+            tree.add_node(0, 10).unwrap();
+            tree.add_node(10, 11).unwrap();
+            tree.add_node(10, 1).unwrap();
+            tree.add_node(1, 2).unwrap();
+            tree.add_node(2, 3).unwrap();
 
-        let mut new_tree = simple_tree();
-        new_tree.swap_labels(10, 11).unwrap();
-        assert_eq!(tree, new_tree);
+            let mut new_tree = simple_tree();
+            new_tree.prune_and_reattach(1, 10).unwrap();
+
+            assert_eq!(tree, new_tree);
+        }
+
+        #[test]
+        fn test_prune_3() {
+            let mut tree = Tree::new(0);
+
+            tree.add_node(0, 10).unwrap();
+            tree.add_node(10, 11).unwrap();
+            tree.add_node(0, 1).unwrap();
+            tree.add_node(1, 2).unwrap();
+            tree.add_node(10, 3).unwrap();
+
+            let mut new_tree = simple_tree();
+            new_tree.prune_and_reattach(3, 10).unwrap();
+
+            assert_eq!(tree, new_tree);
+        }
     }
 
-    #[test]
-    fn test_swap_labels_1_10() {
-        let mut tree = Tree::new(0);
+    mod test_swap_label {
+        use super::*;
 
-        tree.add_node(0, 10).unwrap();
-        tree.add_node(10, 2).unwrap();
-        tree.add_node(2, 3).unwrap();
+        #[test]
+        fn swap_10_11() {
+            let mut tree = Tree::new(0);
 
-        tree.add_node(0, 1).unwrap();
-        tree.add_node(1, 11).unwrap();
+            tree.add_node(0, 1).unwrap();
+            tree.add_node(1, 2).unwrap();
+            tree.add_node(2, 3).unwrap();
 
-        let mut new_tree = simple_tree();
-        new_tree.swap_labels(1, 10).unwrap();
-        assert_eq!(tree, new_tree);
-    }
+            tree.add_node(0, 11).unwrap();
+            tree.add_node(11, 10).unwrap();
 
-    #[test]
-    fn test_swap_labels_1_2() {
-        let mut tree = Tree::new(0);
+            let mut new_tree = simple_tree();
+            new_tree.swap_labels(10, 11).unwrap();
+            assert_eq!(tree, new_tree);
+        }
 
-        tree.add_node(0, 2).unwrap(); // Node 1 becomes 2
-        tree.add_node(2, 1).unwrap(); // Child of new 2 (was 1)
-        tree.add_node(1, 3).unwrap(); // Child of new 1 (was 2)
+        #[test]
+        fn swap_1_10() {
+            let mut tree = Tree::new(0);
 
-        tree.add_node(0, 10).unwrap();
-        tree.add_node(10, 11).unwrap();
+            tree.add_node(0, 10).unwrap();
+            tree.add_node(10, 2).unwrap();
+            tree.add_node(2, 3).unwrap();
 
-        let mut new_tree = simple_tree();
-        new_tree.swap_labels(1, 2).unwrap();
-        assert_eq!(tree, new_tree);
-    }
+            tree.add_node(0, 1).unwrap();
+            tree.add_node(1, 11).unwrap();
 
-    #[test]
-    fn test_swap_labels_0_1() {
-        let mut tree = Tree::new(1); // Node 0 becomes 1 (new root)
+            let mut new_tree = simple_tree();
+            new_tree.swap_labels(1, 10).unwrap();
+            assert_eq!(tree, new_tree);
+        }
 
-        tree.add_node(1, 0).unwrap(); // Node 1 becomes 0 (child of new root)
-        tree.add_node(0, 2).unwrap(); // Child of new 0 (was 1)
-        tree.add_node(2, 3).unwrap(); // Child of 2
+        #[test]
+        fn swap_1_2() {
+            let mut tree = Tree::new(0);
 
-        tree.add_node(1, 10).unwrap(); // Sibling of new 0 (was root)
-        tree.add_node(10, 11).unwrap(); // Child of 10
+            tree.add_node(0, 2).unwrap(); // Node 1 becomes 2
+            tree.add_node(2, 1).unwrap(); // Child of new 2 (was 1)
+            tree.add_node(1, 3).unwrap(); // Child of new 1 (was 2)
 
-        let mut new_tree = simple_tree();
-        new_tree.swap_labels(0, 1).unwrap();
-        assert_eq!(tree, new_tree);
-    }
+            tree.add_node(0, 10).unwrap();
+            tree.add_node(10, 11).unwrap();
 
-    #[test]
-    fn test_swap_labels_0_2() {
-        let mut tree = Tree::new(2); // Node 0 becomes 2 (new root)
+            let mut new_tree = simple_tree();
+            new_tree.swap_labels(1, 2).unwrap();
+            assert_eq!(tree, new_tree);
+        }
 
-        tree.add_node(2, 1).unwrap(); // Node 1 remains the same
-        tree.add_node(1, 0).unwrap(); // Node 2 becomes 0 (child of new root)
-        tree.add_node(0, 3).unwrap(); // Child of new 0 (was 2)
+        #[test]
+        fn swap_0_1() {
+            let mut tree = Tree::new(1); // Node 0 becomes 1 (new root)
 
-        tree.add_node(2, 10).unwrap(); // Sibling of new 1 (was root)
-        tree.add_node(10, 11).unwrap(); // Child of 10
+            tree.add_node(1, 0).unwrap(); // Node 1 becomes 0 (child of new root)
+            tree.add_node(0, 2).unwrap(); // Child of new 0 (was 1)
+            tree.add_node(2, 3).unwrap(); // Child of 2
 
-        let mut new_tree = simple_tree();
-        new_tree.swap_labels(0, 2).unwrap();
-        assert_eq!(tree, new_tree);
-    }
+            tree.add_node(1, 10).unwrap(); // Sibling of new 0 (was root)
+            tree.add_node(10, 11).unwrap(); // Child of 10
 
-    #[test]
-    fn test_swap_labels_1_3() {
-        let mut tree = Tree::new(0);
+            let mut new_tree = simple_tree();
+            new_tree.swap_labels(0, 1).unwrap();
+            assert_eq!(tree, new_tree);
+        }
 
-        tree.add_node(0, 3).unwrap(); // Node 1 becomes 3
-        tree.add_node(3, 2).unwrap(); // Child of new 3 (was 1)
-        tree.add_node(2, 1).unwrap(); // Node 3 becomes 1 (child of 2)
+        #[test]
+        fn swap_0_2() {
+            let mut tree = Tree::new(2); // Node 0 becomes 2 (new root)
 
-        tree.add_node(0, 10).unwrap();
-        tree.add_node(10, 11).unwrap();
+            tree.add_node(2, 1).unwrap(); // Node 1 remains the same
+            tree.add_node(1, 0).unwrap(); // Node 2 becomes 0 (child of new root)
+            tree.add_node(0, 3).unwrap(); // Child of new 0 (was 2)
 
-        let mut new_tree = simple_tree();
-        new_tree.swap_labels(1, 3).unwrap();
+            tree.add_node(2, 10).unwrap(); // Sibling of new 1 (was root)
+            tree.add_node(10, 11).unwrap(); // Child of 10
 
-        assert_eq!(tree, new_tree);
+            let mut new_tree = simple_tree();
+            new_tree.swap_labels(0, 2).unwrap();
+            assert_eq!(tree, new_tree);
+        }
+
+        #[test]
+        fn swap_1_3() {
+            let mut tree = Tree::new(0);
+
+            tree.add_node(0, 3).unwrap(); // Node 1 becomes 3
+            tree.add_node(3, 2).unwrap(); // Child of new 3 (was 1)
+            tree.add_node(2, 1).unwrap(); // Node 3 becomes 1 (child of 2)
+
+            tree.add_node(0, 10).unwrap();
+            tree.add_node(10, 11).unwrap();
+
+            let mut new_tree = simple_tree();
+            new_tree.swap_labels(1, 3).unwrap();
+
+            assert_eq!(tree, new_tree);
+        }
     }
 }
