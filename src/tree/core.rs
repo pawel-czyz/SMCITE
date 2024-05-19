@@ -92,8 +92,11 @@ impl Tree {
 
         // Recursively print children of the root node
         if let Some(children) = self.children.get(&(self.root)) {
-            let count = children.len();
-            for (i, child) in children.iter().enumerate() {
+            let mut sorted_children: Vec<&Node> = children.iter().collect();
+            sorted_children.sort();
+
+            let count = sorted_children.len();
+            for (i, &child) in sorted_children.iter().enumerate() {
                 _print_tree(self, *child, "", i == count - 1);
             }
         }
@@ -161,6 +164,10 @@ impl Tree {
         true
     }
 
+    pub fn get_parent(&self, node: Node) -> Option<Node> {
+        self.parents.get(&node).copied()
+    }
+
     /// Checks if `child` is a child of `parent`
     pub fn is_child(&self, child: Node, parent: Node) -> bool {
         if let Some(node) = self.parents.get(&child) {
@@ -168,6 +175,10 @@ impl Tree {
         } else {
             false
         }
+    }
+
+    pub fn is_parent(&self, parent: Node, child: Node) -> bool {
+        self.is_child(child, parent)
     }
 
     /// Swaps two nodes in the tree, leaving the rest
@@ -207,13 +218,13 @@ impl Tree {
             let grandchildren = self.children.remove(&child);
             let siblings = self.children.remove(&parent).unwrap();
 
+            // Remove the current parent of the child
+            self.parents.remove(&child);
+
             // Make sure the grandparent is properly connected
             if let Some(grandparent) = self.parents.remove(&parent) {
-                let set = self.children.get_mut(&grandparent).unwrap();
-                set.remove(&parent);
-                set.insert(child);
-
-                self.parents.insert(child, grandparent);
+                self.children.get_mut(&grandparent).unwrap().remove(&parent);
+                self.unsafe_add_node(grandparent, child);
             }
             self.unsafe_add_node(child, parent);
 
@@ -235,8 +246,8 @@ impl Tree {
             return Ok(());
         }
 
-        // Now the case when the nodes are not adjacent
-        println!("Getting children and parents...");
+        // Now the case when the nodes are not parent and child
+        // Note that they can still be siblings
 
         // Now we have update children and parents
         // Note that for either node these may not exist.
@@ -245,8 +256,6 @@ impl Tree {
 
         let parent_i = self.parents.remove(&i);
         let parent_j = self.parents.remove(&j);
-
-        println!("Wait for later...");
 
         // We add (old) children of i as (new) children of j
         // and at the same time update their parent to j
@@ -263,7 +272,18 @@ impl Tree {
             }
         }
 
-        // Finally: we need to fix the parents.
+        // Finally: we need to fix the parents of both nodes.
+        // There is a case here to consider: they may have a common parent.
+        if let (Some(p1), Some(p2)) = (parent_i, parent_j) {
+            if p1 == p2 {
+                // We don't have to update the children list.
+                // We just need to update the `parents` map:
+                self.parents.insert(i, p1);
+                self.parents.insert(j, p1);
+                return Ok(());
+            }
+        }
+        // These nodes have different parents. We can update them separately:
         if let Some(parent) = parent_i {
             self.parents.insert(j, parent);
             // Update parent's children list
@@ -294,8 +314,11 @@ fn _print_tree(tree: &Tree, node: Node, prefix: &str, is_last: bool) {
 
     // Recursively print each child
     if let Some(children) = tree.children.get(&node) {
-        let count = children.len();
-        for (i, child) in children.iter().enumerate() {
+        let mut sorted_children: Vec<&Node> = children.iter().collect();
+        sorted_children.sort();
+
+        let count = sorted_children.len();
+        for (i, &child) in sorted_children.iter().enumerate() {
             _print_tree(
                 tree,
                 *child,
@@ -369,7 +392,8 @@ mod tests {
         assert_eq!(tree, new_tree);
     }
 
-    fn test_swap_labels_10_1() {
+    #[test]
+    fn test_swap_labels_1_10() {
         let mut tree = Tree::new(0);
 
         tree.add_node(0, 10).unwrap();
@@ -384,6 +408,7 @@ mod tests {
         assert_eq!(tree, new_tree);
     }
 
+    #[test]
     fn test_swap_labels_1_2() {
         let mut tree = Tree::new(0);
 
@@ -399,6 +424,7 @@ mod tests {
         assert_eq!(tree, new_tree);
     }
 
+    #[test]
     fn test_swap_labels_0_1() {
         let mut tree = Tree::new(1); // Node 0 becomes 1 (new root)
 
@@ -414,6 +440,7 @@ mod tests {
         assert_eq!(tree, new_tree);
     }
 
+    #[test]
     fn test_swap_labels_0_2() {
         let mut tree = Tree::new(2); // Node 0 becomes 2 (new root)
 
@@ -429,6 +456,7 @@ mod tests {
         assert_eq!(tree, new_tree);
     }
 
+    #[test]
     fn test_swap_labels_1_3() {
         let mut tree = Tree::new(0);
 
@@ -441,6 +469,7 @@ mod tests {
 
         let mut new_tree = simple_tree();
         new_tree.swap_labels(1, 3).unwrap();
+
         assert_eq!(tree, new_tree);
     }
 }
