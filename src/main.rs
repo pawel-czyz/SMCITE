@@ -1,4 +1,4 @@
-use smcite::tree::{create_chain_tree, Tree};
+use blackforest::tree::{create_chain_tree, Tree};
 
 fn main() {
     let mut tree = create_chain_tree([0, 1, 2, 3]).unwrap();

@@ -28,3 +28,36 @@ where
         panic!("The input list must contain at least one node.");
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    mod test_create_star_tree {
+        use super::*;
+
+        #[test]
+        fn star_4_nodes() {
+            let root = 15;
+            let tree = create_star_tree(root, [3, 5, 8]).unwrap();
+            let mut new_tree = Tree::new(root);
+            new_tree.add_node(root, 3).unwrap();
+            new_tree.add_node(root, 5).unwrap();
+            new_tree.add_node(root, 8).unwrap();
+            assert_eq!(tree, new_tree);
+        }
+    }
+
+    mod test_create_chain_tree {
+        use super::*;
+
+        #[test]
+        fn chain_3_nodes() {
+            let tree = create_chain_tree([3, 5, 8]).unwrap();
+            let mut new_tree = Tree::new(3);
+            new_tree.add_node(3, 5).unwrap();
+            new_tree.add_node(5, 8).unwrap();
+            assert_eq!(tree, new_tree);
+        }
+    }
+}
