@@ -304,7 +304,6 @@ impl Tree {
         Ok(())
     }
 
-
     /// Calculates the height of the tree.
     pub fn calculate_height(&self) -> usize {
         self.calculate_height_from_node(self.get_root())
@@ -313,7 +312,8 @@ impl Tree {
     /// Calculates the height of the subtree starting at `node`.
     pub fn calculate_height_from_node(&self, node: Node) -> usize {
         if let Some(children) = self.children.get(&node) {
-            let max_height = children.iter()
+            let max_height = children
+                .iter()
                 .map(|&child| self.calculate_height_from_node(child))
                 .max()
                 .unwrap_or(0);
@@ -321,6 +321,53 @@ impl Tree {
         } else {
             1 // Leaf node
         }
+    }
+
+    /// Returns a set (possibly empty) with descendants.
+    pub fn get_descendants(&self, node: Node) -> HashSet<Node> {
+        let mut descendants = HashSet::new();
+        self.collect_descendants(node, &mut descendants);
+        descendants
+    }
+
+    fn collect_descendants(&self, node: Node, descendants: &mut HashSet<Node>) {
+        if let Some(children) = self.children.get(&node) {
+            for &child in children {
+                if descendants.insert(child) {
+                    self.collect_descendants(child, descendants);
+                }
+            }
+        }
+    }
+
+    /// Prunes and reattaches subtree rooted at `node` to `new_parent`. This function
+    /// assumes that `node != new_parent` and that `new_parent` is *not* a descendant
+    /// of `node` (otherwise the notion of pruning and reattaching a subtree would not be
+    /// properly defined).
+    pub fn prune_and_reattach(&mut self, node: Node, new_parent: Node) -> Result<(), TreeError> {
+        if !self.contains(node) || !self.contains(new_parent) {
+            return Err(TreeError::NodeNotFound);
+        }
+        // It's not possible to reattach the node to itself.
+        if node == new_parent {
+            return Err(TreeError::NodeAlreadyExists); // TODO: Refactor this error.
+        }
+        // It's not possible to reattach a node to its own subtree.
+        if self.get_descendants(node).contains(&new_parent) {
+            return Err(TreeError::TopologyError);
+        }
+        // At this point note that node != root, because new_parent would need
+        // to be a root or would be a descendant
+
+        // Remove node from current `parent` set (it exists, as it's not the root)
+        let parent = self.parents.get(&node).unwrap();
+        if let Some(set) = self.children.get_mut(parent) {
+            set.remove(&node);
+        }
+        // Reattach the node to the new parent.
+        self.unsafe_add_node(new_parent, node);
+
+        Ok(())
     }
 }
 
